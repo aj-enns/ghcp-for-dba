@@ -6,8 +6,7 @@ var connectionString = Environment.GetEnvironmentVariable("RETAILDB_CONNECTION_S
     ?? throw new InvalidOperationException(
         "RETAILDB_CONNECTION_STRING environment variable is not set.\n" +
         "Example: Server=tcp:<server>.database.windows.net,1433;Initial Catalog=RetailDb;" +
-        "Persist Security Info=False;User ID=retailadmin;Password=<password>;" +
-        "MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;");
+        "Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;");
 
 var optionsBuilder = new DbContextOptionsBuilder<RetailDbContext>();
 optionsBuilder.UseSqlServer(connectionString);

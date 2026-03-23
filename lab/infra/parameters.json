@@ -5,16 +5,14 @@
     "location": {
       "value": "eastus"
     },
-    "sqlAdminLogin": {
-      "value": "retailadmin"
+    "aadAdminLogin": {
+      "value": "<user-principal-name>"
     },
-    "sqlAdminPassword": {
-      "reference": {
-        "keyVault": {
-          "id": "/subscriptions/<subscription-id>/resourceGroups/<rg-name>/providers/Microsoft.KeyVault/vaults/<kv-name>"
-        },
-        "secretName": "sql-admin-password"
-      }
+    "aadAdminObjectId": {
+      "value": "<azure-ad-object-id>"
+    },
+    "aadAdminTenantId": {
+      "value": "<azure-ad-tenant-id>"
     },
     "databaseName": {
       "value": "RetailDb"

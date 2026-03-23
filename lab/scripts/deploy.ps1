@@ -2,7 +2,7 @@
 # deploy.ps1 — Deploy the Retail Lab Azure SQL database (PowerShell version)
 #
 # Usage:
-#   .\scripts\deploy.ps1 -ResourceGroup <rg-name> -SqlPassword <password>
+#   .\scripts\deploy.ps1 -ResourceGroup <rg-name>
 #                        [-Location eastus] [-Subscription <id>]
 #
 # Prerequisites:
@@ -13,10 +13,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)][string]$ResourceGroup,
-    [Parameter(Mandatory)][string]$SqlPassword,
     [string]$Location     = "eastus",
-    [string]$Subscription = "",
-    [string]$SqlAdminLogin = "retailadmin"
+    [string]$Subscription = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -33,21 +31,49 @@ if ($Subscription) {
     az account set --subscription $Subscription
 }
 
+# ── Get current Azure AD user info ────────────────────────────────────────────
+Write-Host "🔑 Retrieving Azure AD identity..."
+$AadUser = az ad signed-in-user show --output json | ConvertFrom-Json
+$AadAdminLogin    = $AadUser.userPrincipalName
+$AadAdminObjectId = $AadUser.id
+$AadTenantId      = (az account show --output json | ConvertFrom-Json).tenantId
+
+Write-Host "   Admin : $AadAdminLogin"
+Write-Host "   Tenant: $AadTenantId"
+
 # ── Ensure resource group ─────────────────────────────────────────────────────
 Write-Host "🔧 Ensuring resource group '$ResourceGroup' exists in '$Location'..."
 az group create --name $ResourceGroup --location $Location --output none
 
 # ── Deploy Bicep ──────────────────────────────────────────────────────────────
 Write-Host "🚀 Deploying Bicep template..."
-$DeployJson = az deployment group create `
+$PrevErrorPref = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$DeployOutput = az deployment group create `
     --name $DeployName `
     --resource-group $ResourceGroup `
     --template-file $BicepFile `
-    --parameters sqlAdminPassword=$SqlPassword location=$Location `
-    --output json | ConvertFrom-Json
+    --parameters location=$Location `
+                 aadAdminLogin=$AadAdminLogin `
+                 aadAdminObjectId=$AadAdminObjectId `
+                 aadAdminTenantId=$AadTenantId `
+    --output json
+$DeployExitCode = $LASTEXITCODE
+$ErrorActionPreference = $PrevErrorPref
 
+if ($DeployExitCode -ne 0) {
+    Write-Error "❌ Bicep deployment failed:`n$DeployOutput"
+    exit 1
+}
+
+$DeployJson    = $DeployOutput | ConvertFrom-Json
 $SqlServerFqdn = $DeployJson.properties.outputs.sqlServerFqdn.value
 $DbName        = $DeployJson.properties.outputs.databaseName.value
+
+if (-not $SqlServerFqdn -or -not $DbName) {
+    Write-Error "❌ Deployment outputs are missing. Check the Azure deployment log."
+    exit 1
+}
 
 Write-Host ""
 Write-Host "✅ Infrastructure deployed successfully!"
@@ -55,8 +81,8 @@ Write-Host "   SQL Server : $SqlServerFqdn"
 Write-Host "   Database   : $DbName"
 Write-Host ""
 
-# ── Connection string ─────────────────────────────────────────────────────────
-$ConnectionString = "Server=tcp:${SqlServerFqdn},1433;Initial Catalog=${DbName};Persist Security Info=False;User ID=${SqlAdminLogin};Password=${SqlPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+# ── Connection string (Azure AD) ─────────────────────────────────────────────
+$ConnectionString = "Server=tcp:${SqlServerFqdn},1433;Initial Catalog=${DbName};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 Write-Host "📋 Connection string (store this securely):"
 Write-Host "   $ConnectionString"
 Write-Host ""

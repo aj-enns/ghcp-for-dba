@@ -69,7 +69,6 @@ az account set --subscription "<your-subscription-id>"
 cd lab
 ./scripts/deploy.sh \
   --resource-group rg-retail-lab \
-  --password "YourStrong!Passw0rd" \
   --location eastus
 ```
 
@@ -78,22 +77,22 @@ cd lab
 cd lab
 .\scripts\deploy.ps1 `
   -ResourceGroup rg-retail-lab `
-  -SqlPassword "YourStrong!Passw0rd" `
   -Location eastus
 ```
 
 The script will:
-1. Create the resource group (if it does not exist)
-2. Deploy the Bicep template (SQL Server + Database)
-3. Print the connection string
-4. Optionally run EF migrations and seed data
+1. Retrieve your Azure AD identity (from `az login`)
+2. Create the resource group (if it does not exist)
+3. Deploy the Bicep template (SQL Server with Azure AD-only auth + Database)
+4. Print the connection string
+5. Optionally run EF migrations and seed data
 
 ### 3 — Manual EF commands
 
 If you want to run the database steps separately:
 
 ```bash
-export RETAILDB_CONNECTION_STRING="Server=tcp:<server>.database.windows.net,1433;..."
+export RETAILDB_CONNECTION_STRING="Server=tcp:<server>.database.windows.net,1433;Initial Catalog=RetailDb;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 
 # Apply schema migrations only
 dotnet run --project src/RetailDb -- migrate

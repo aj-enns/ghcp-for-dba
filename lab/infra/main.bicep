@@ -8,12 +8,14 @@ param location string = resourceGroup().location
 @description('Unique suffix appended to resource names to avoid conflicts')
 param nameSuffix string = uniqueString(resourceGroup().id)
 
-@description('SQL Server administrator login name')
-param sqlAdminLogin string = 'retailadmin'
+@description('Azure AD admin display name (e.g. user principal name)')
+param aadAdminLogin string
 
-@description('SQL Server administrator password')
-@secure()
-param sqlAdminPassword string
+@description('Azure AD admin object ID')
+param aadAdminObjectId string
+
+@description('Azure AD tenant ID')
+param aadAdminTenantId string
 
 @description('Name of the SQL database')
 param databaseName string = 'RetailDb'
@@ -24,23 +26,29 @@ param databaseSku string = 'S1'
 @description('Allow Azure services to connect to this server')
 param allowAzureServices bool = true
 
-// ── SQL Server ────────────────────────────────────────────────
+// ── SQL Server (Azure AD-only authentication) ─────────────────
 var sqlServerName = 'sql-retail-lab-${nameSuffix}'
 
-resource sqlServer 'Microsoft.Sql/servers@2021-11-01' = {
+resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   name: sqlServerName
   location: location
   properties: {
-    administratorLogin: sqlAdminLogin
-    administratorLoginPassword: sqlAdminPassword
     version: '12.0'
     minimalTlsVersion: '1.2'
     publicNetworkAccess: 'Enabled'
+    administrators: {
+      administratorType: 'ActiveDirectory'
+      principalType: 'User'
+      login: aadAdminLogin
+      sid: aadAdminObjectId
+      tenantId: aadAdminTenantId
+      azureADOnlyAuthentication: true
+    }
   }
 }
 
 // ── Firewall: allow Azure services ──────────────────────────
-resource azureServicesFirewall 'Microsoft.Sql/servers/firewallRules@2021-11-01' = if (allowAzureServices) {
+resource azureServicesFirewall 'Microsoft.Sql/servers/firewallRules@2023-05-01-preview' = if (allowAzureServices) {
   parent: sqlServer
   name: 'AllowAzureServices'
   properties: {
@@ -50,7 +58,7 @@ resource azureServicesFirewall 'Microsoft.Sql/servers/firewallRules@2021-11-01' 
 }
 
 // ── SQL Database ─────────────────────────────────────────────
-resource sqlDatabase 'Microsoft.Sql/servers/databases@2021-11-01' = {
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
   parent: sqlServer
   name: databaseName
   location: location
@@ -71,4 +79,3 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2021-11-01' = {
 output sqlServerName string = sqlServer.name
 output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
 output databaseName string = sqlDatabase.name
-output connectionStringTemplate string = 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${databaseName};Persist Security Info=False;User ID=${sqlAdminLogin};Password=<password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
