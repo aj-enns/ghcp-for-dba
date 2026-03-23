@@ -2,6 +2,16 @@
 
 A self-contained lab environment for the **GitHub Copilot for DBAs** demos. It provisions an **Azure SQL Database** via Bicep and populates it with a realistic retail dataset managed by **EF Core** (code-first migrations).
 
+> **Ready to start?** After deploying, follow the [Hands-On Lab Walkthrough](../docs/lab-walkthrough.md) — 7 guided tasks:
+>
+> 1. [Run a Health Check](../docs/lab-task-01.md) (Prompt)
+> 2. [Optimize a Slow Query](../docs/lab-task-02.md) (Agent)
+> 3. [Review a Migration Script](../docs/lab-task-03.md) (Agent)
+> 4. [Audit Database Security](../docs/lab-task-04.md) (Agent)
+> 5. [Generate Schema Documentation](../docs/lab-task-05.md) (Prompt)
+> 6. [Customize Coding Standards](../docs/lab-task-06.md) (Custom Instructions)
+> 7. [Incident Response Simulation](../docs/lab-task-07.md) (Agent + Skills)
+
 ---
 
 ## What Gets Created

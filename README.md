@@ -141,6 +141,7 @@ Want a real database to practice on? The `lab/` folder provisions an **Azure SQL
 | | |
 |---|---|
 | **Deploy the lab** | [lab/README.md](lab/README.md) — Bicep + EF Core, deploy + seed |
+| **Hands-on walkthrough** | [docs/lab-walkthrough.md](docs/lab-walkthrough.md) — 7 guided tasks using agents, prompts, skills & instructions |
 | **EF Core reference** | [docs/ef-quickstart.md](docs/ef-quickstart.md) — Migration and seed commands |
 | **Cost** | Standard S1 (20 DTUs) — ~$0.98/day. Tear down when done. |
 
