@@ -1,0 +1,278 @@
+# Retail Lab Environment
+
+A self-contained lab environment for the **GitHub Copilot for DBAs** demos. It provisions an **Azure SQL Database** via Bicep and populates it with a realistic retail dataset managed by **EF Core** (code-first migrations).
+
+> **Ready to start?** After deploying, follow the [Hands-On Lab Walkthrough](../docs/lab-walkthrough.md) — 7 guided tasks:
+>
+> 1. [Run a Health Check](../docs/lab-task-01.md) (Prompt)
+> 2. [Optimize a Slow Query](../docs/lab-task-02.md) (Agent)
+> 3. [Review a Migration Script](../docs/lab-task-03.md) (Agent)
+> 4. [Audit Database Security](../docs/lab-task-04.md) (Agent)
+> 5. [Generate Schema Documentation](../docs/lab-task-05.md) (Prompt)
+> 6. [Customize Coding Standards](../docs/lab-task-06.md) (Custom Instructions)
+> 7. [Incident Response Simulation](../docs/lab-task-07.md) (Agent + Skills)
+
+---
+
+## What Gets Created
+
+### Azure Infrastructure (`infra/`)
+| Resource | Details |
+|---|---|
+| Azure SQL Server | Latest engine (v12), TLS 1.2, public endpoint |
+| Azure SQL Database | `RetailDb`, Standard S1 (10 GB), Latin1 collation |
+| Firewall rule | Allow Azure services (0.0.0.0 → 0.0.0.0) |
+
+### Database Schema (10 tables)
+
+```
+Category ──< Product >── Supplier
+                │
+     ┌──────────┴─────────┐
+     │                    │
+  OrderItem >── Order     Inventory
+                │   \
+             Customer  Store ──< Employee
+                            │
+                         Review ──< Customer
+                                 \── Product
+```
+
+| Table | Rows (seed) | Purpose |
+|---|---|---|
+| `Category` | 16 | Product taxonomy (6 top-level + 10 sub-categories) |
+| `Supplier` | 6 | Vendor/supplier companies |
+| `Product` | 26 | SKUs with price, cost, reorder levels |
+| `Customer` | 15 | Registered shoppers |
+| `Store` | 5 | Physical store locations |
+| `Employee` | 12 | Staff with manager hierarchy |
+| `Order` | 21 | Sales orders with status lifecycle |
+| `OrderItem` | ~45 | Line items per order |
+| `Inventory` | 130 | Stock levels per product per store |
+| `Review` | 10 | Star ratings and text reviews |
+
+---
+
+## Prerequisites
+
+| Tool | Version | Install |
+|---|---|---|
+| Azure CLI | ≥ 2.57 | [docs.microsoft.com](https://learn.microsoft.com/cli/azure/install-azure-cli) |
+| Bicep CLI | ≥ 0.27 | Bundled with Azure CLI (`az bicep install`) |
+| .NET SDK | 8.x | [dotnet.microsoft.com](https://dotnet.microsoft.com/download) |
+
+---
+
+## Quick Start
+
+### 1 — Log in to Azure
+
+```bash
+az login
+az account set --subscription "<your-subscription-id>"
+```
+
+### 2 — Deploy infrastructure + seed data
+
+**macOS / Linux**
+```bash
+cd lab
+./scripts/deploy.sh \
+  --resource-group rg-retail-lab \
+  --location eastus
+```
+
+**Windows (PowerShell)**
+```powershell
+cd lab
+.\scripts\deploy.ps1 `
+  -ResourceGroup rg-retail-lab `
+  -Location eastus
+```
+
+The script will:
+1. Retrieve your Azure AD identity (from `az login`)
+2. Create the resource group (if it does not exist)
+3. Deploy the Bicep template (SQL Server with Azure AD-only auth + Database)
+4. Print the connection string
+5. Optionally run EF migrations and seed data
+
+### 3 — Configure your `.env` file
+
+Copy the example file and fill in your deployed server's unique suffix:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and replace `<unique-suffix>` with the value from your deployment output (e.g., `ug5lhmwwszwla`):
+
+```env
+SQL_SERVER_NAME=sql-retail-lab-abc123xyz
+SQL_SERVER_FQDN=sql-retail-lab-abc123xyz.database.windows.net
+SQL_DATABASE=RetailDb
+RESOURCE_GROUP=rg-retail-lab
+```
+
+> **Note:** `.env` is git-ignored. The Copilot custom instructions (`.github/copilot-instructions.md`) reference `.env` for environment-specific values so that Copilot can auto-connect to your database.
+
+### 4 — Manual EF commands
+
+If you want to run the database steps separately:
+
+```bash
+export RETAILDB_CONNECTION_STRING="Server=tcp:<server>.database.windows.net,1433;Initial Catalog=RetailDb;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+
+# Apply schema migrations only
+dotnet run --project src/RetailDb -- migrate
+
+# Seed retail data (idempotent — skips if data already exists)
+dotnet run --project src/RetailDb -- seed
+
+# Full setup (migrate + seed)
+dotnet run --project src/RetailDb -- setup
+
+# Drop the database (destructive!)
+dotnet run --project src/RetailDb -- drop
+```
+
+### 5 — Adding your IP to the firewall (if needed)
+
+```bash
+MY_IP=$(curl -s https://api.ipify.org)
+az sql server firewall-rule create \
+  --resource-group rg-retail-lab \
+  --server sql-retail-lab-<suffix> \
+  --name "MyDev" \
+  --start-ip-address "$MY_IP" \
+  --end-ip-address "$MY_IP"
+```
+
+---
+
+## Schema Migration Workflow
+
+This project uses **EF Core code-first migrations**. To create a new migration after changing an entity model:
+
+```bash
+# From lab/src/RetailDb/
+export RETAILDB_CONNECTION_STRING="..."
+dotnet ef migrations add <MigrationName>
+dotnet ef database update
+```
+
+---
+
+## Useful Sample Queries
+
+### Top products by revenue
+```sql
+SELECT
+    p.Name,
+    SUM(oi.LineTotal) AS TotalRevenue,
+    SUM(oi.Quantity)  AS UnitsSold
+FROM OrderItem oi
+JOIN Product p ON oi.ProductId = p.ProductId
+GROUP BY p.Name
+ORDER BY TotalRevenue DESC;
+```
+
+### Orders by store and status
+```sql
+SELECT
+    s.StoreName,
+    o.Status,
+    COUNT(*)           AS OrderCount,
+    SUM(o.TotalAmount) AS TotalSales
+FROM [Order] o
+JOIN Store s ON o.StoreId = s.StoreId
+GROUP BY s.StoreName, o.Status
+ORDER BY s.StoreName, o.Status;
+```
+
+### Low-stock products (below reorder level)
+```sql
+SELECT
+    p.Sku,
+    p.Name,
+    s.StoreName,
+    i.QuantityOnHand,
+    p.ReorderLevel
+FROM Inventory i
+JOIN Product p ON i.ProductId = p.ProductId
+JOIN Store   s ON i.StoreId   = s.StoreId
+WHERE i.QuantityOnHand < p.ReorderLevel
+ORDER BY i.QuantityOnHand ASC;
+```
+
+### Customer lifetime value
+```sql
+SELECT
+    c.CustomerId,
+    c.FirstName + ' ' + c.LastName AS CustomerName,
+    COUNT(DISTINCT o.OrderId)      AS TotalOrders,
+    SUM(o.TotalAmount)             AS LifetimeValue,
+    AVG(o.TotalAmount)             AS AvgOrderValue
+FROM Customer c
+JOIN [Order] o ON c.CustomerId = o.CustomerId
+WHERE o.Status = 'Delivered'
+GROUP BY c.CustomerId, c.FirstName, c.LastName
+ORDER BY LifetimeValue DESC;
+```
+
+### Employee hierarchy
+```sql
+SELECT
+    e.FirstName + ' ' + e.LastName  AS Employee,
+    e.JobTitle,
+    e.Department,
+    m.FirstName + ' ' + m.LastName  AS Manager,
+    st.StoreName
+FROM Employee e
+LEFT JOIN Employee m ON e.ManagerId = m.EmployeeId
+JOIN Store st ON e.StoreId = st.StoreId
+ORDER BY st.StoreName, e.Department;
+```
+
+---
+
+## Tear Down
+
+```bash
+az group delete --name rg-retail-lab --yes --no-wait
+```
+
+---
+
+## Project Structure
+
+```
+lab/
+├── infra/
+│   ├── main.bicep          # Azure SQL Server + Database template
+│   └── parameters.json     # Example parameters (reference Key Vault for password)
+├── scripts/
+│   ├── deploy.sh           # Bash deployment script
+│   └── deploy.ps1          # PowerShell deployment script
+└── src/
+    └── RetailDb/
+        ├── RetailDb.csproj
+        ├── Program.cs              # CLI entry point (migrate / seed / setup / drop)
+        ├── Data/
+        │   ├── RetailDbContext.cs          # EF Core DbContext + Fluent API config
+        │   └── RetailDbContextFactory.cs  # Design-time factory for CLI tools
+        ├── Models/
+        │   ├── Category.cs
+        │   ├── Customer.cs
+        │   ├── Employee.cs
+        │   ├── Inventory.cs
+        │   ├── Order.cs
+        │   ├── OrderItem.cs
+        │   ├── Product.cs
+        │   ├── Review.cs
+        │   ├── Store.cs
+        │   └── Supplier.cs
+        ├── Migrations/             # Auto-generated EF Core migrations
+        └── Seed/
+            └── DatabaseSeeder.cs  # Retail test data
+```

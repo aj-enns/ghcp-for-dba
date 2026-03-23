@@ -2,6 +2,57 @@
 
 These rules apply to all Copilot interactions in this workspace.
 
+## Lab Environment
+
+> **Note:** Environment-specific values (server name, resource group) are stored in `.env` at the repo root.
+> This file is git-ignored. Read `.env` to resolve `<unique-suffix>` placeholders below.
+
+### Connection Details
+- **Project:** RetailDb (Retail Lab)
+- **Platform:** Azure SQL Database (PaaS)
+- **Server:** `sql-retail-lab-<unique-suffix>.database.windows.net`
+- **Database:** `RetailDb`
+- **Resource Group:** `rg-retail-lab`
+- **Region:** Canada Central
+- **SKU:** Standard S1 (20 DTUs)
+
+### Authentication
+- Authentication is **Azure AD-only** (no SQL auth)
+- Use `Authentication=Active Directory Default` in connection strings
+- The MSSQL extension connection profile `RetailLab` is pre-configured
+
+### How to Connect
+- Use the **MSSQL extension** in VS Code — connect via the `RetailLab` profile
+- Or use Azure CLI: `az sql query --server sql-retail-lab-<unique-suffix> --database RetailDb --resource-group rg-retail-lab`
+
+### How to Query
+- Use the `mssql_run_query` tool with `connectionId` from `mssql_connect`
+- Always include `queryTypes` (e.g., `["SELECT"]`) and `queryIntent` (e.g., `"troubleshooting"`)
+- Connect first: `mssql_connect` with server `sql-retail-lab-<unique-suffix>.database.windows.net` and database `RetailDb`
+
+### Schema Overview
+The database has 10 business tables plus EF Core migrations tracking:
+
+| Table | Description | Key Relationships |
+|-------|-------------|-------------------|
+| Categories | Product categories (self-referencing hierarchy) | ParentCategoryId → Categories |
+| Suppliers | Product suppliers | — |
+| Products | Product catalog | CategoryId → Categories, SupplierId → Suppliers |
+| Customers | Customer registry | — |
+| Stores | Retail store locations | — |
+| Employees | Store employees (self-referencing manager hierarchy) | StoreId → Stores, ManagerId → Employees |
+| Orders | Customer orders | CustomerId → Customers, StoreId → Stores, EmployeeId → Employees |
+| OrderItems | Order line items | OrderId → Orders, ProductId → Products |
+| Inventories | Stock levels per product per store | ProductId → Products, StoreId → Stores |
+| Reviews | Product reviews by customers | ProductId → Products, CustomerId → Customers |
+
+### Key Configuration
+- Compatibility Level: 170 (SQL Server 2022)
+- Query Store: Enabled (READ_WRITE)
+- MAXDOP: 8
+- Collation: SQL_Latin1_General_CP1_CI_AS
+- TDE: Enabled
+
 ## SQL Coding Standards
 
 ### Naming Conventions

@@ -1,0 +1,15 @@
+# .NET build outputs
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+.vs/
+
+# dotnet tool manifests local
+.config/
+
+# NuGet packages (restored on build)
+*.nupkg
+packages/
