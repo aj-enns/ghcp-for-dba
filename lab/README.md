@@ -87,7 +87,26 @@ The script will:
 4. Print the connection string
 5. Optionally run EF migrations and seed data
 
-### 3 — Manual EF commands
+### 3 — Configure your `.env` file
+
+Copy the example file and fill in your deployed server's unique suffix:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and replace `<unique-suffix>` with the value from your deployment output (e.g., `ug5lhmwwszwla`):
+
+```env
+SQL_SERVER_NAME=sql-retail-lab-abc123xyz
+SQL_SERVER_FQDN=sql-retail-lab-abc123xyz.database.windows.net
+SQL_DATABASE=RetailDb
+RESOURCE_GROUP=rg-retail-lab
+```
+
+> **Note:** `.env` is git-ignored. The Copilot custom instructions (`.github/copilot-instructions.md`) reference `.env` for environment-specific values so that Copilot can auto-connect to your database.
+
+### 4 — Manual EF commands
 
 If you want to run the database steps separately:
 
@@ -107,7 +126,7 @@ dotnet run --project src/RetailDb -- setup
 dotnet run --project src/RetailDb -- drop
 ```
 
-### 4 — Adding your IP to the firewall (if needed)
+### 5 — Adding your IP to the firewall (if needed)
 
 ```bash
 MY_IP=$(curl -s https://api.ipify.org)

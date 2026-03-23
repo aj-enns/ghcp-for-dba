@@ -4,6 +4,9 @@ These rules apply to all Copilot interactions in this workspace.
 
 ## Lab Environment
 
+> **Note:** Environment-specific values (server name, resource group) are stored in `.env` at the repo root.
+> This file is git-ignored. Read `.env` to resolve `<unique-suffix>` placeholders below.
+
 ### Connection Details
 - **Project:** RetailDb (Retail Lab)
 - **Platform:** Azure SQL Database (PaaS)
