@@ -36,6 +36,10 @@ Common things to include for DBA projects:
 - Testing and validation requirements
 - Environment-specific rules (SQL Server version, compatibility level)
 
+## See It in Action
+
+The [`copilot-instructions.md`](../.github/copilot-instructions.md) in this repo is a working example used with the [RetailDb lab environment](../lab/README.md). It covers SQL coding standards, migration safety patterns, and a code review checklist — exactly the kind of file a DBA team would drop into a production project.
+
 ## Tip: Rule Order Matters
 
 Copilot processes instructions top-to-bottom. Put your most critical rules first:
