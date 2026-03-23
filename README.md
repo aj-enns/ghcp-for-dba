@@ -140,6 +140,7 @@ Want a real database to practice on? The `lab/` folder provisions an **Azure SQL
 
 | | |
 |---|---|
+| **Requirements** | Azure subscription ([free trial](https://azure.microsoft.com/free/)), VS Code with Copilot + MSSQL extension, Azure CLI, .NET 8 SDK |
 | **Deploy the lab** | [lab/README.md](lab/README.md) — Bicep + EF Core, deploy + seed |
 | **Hands-on walkthrough** | [docs/lab-walkthrough.md](docs/lab-walkthrough.md) — 7 guided tasks using agents, prompts, skills & instructions |
 | **EF Core reference** | [docs/ef-quickstart.md](docs/ef-quickstart.md) — Migration and seed commands |

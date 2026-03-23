@@ -55,11 +55,13 @@ Category ──< Product >── Supplier
 
 ## Prerequisites
 
-| Tool | Version | Install |
-|---|---|---|
-| Azure CLI | ≥ 2.57 | [docs.microsoft.com](https://learn.microsoft.com/cli/azure/install-azure-cli) |
-| Bicep CLI | ≥ 0.27 | Bundled with Azure CLI (`az bicep install`) |
-| .NET SDK | 8.x | [dotnet.microsoft.com](https://dotnet.microsoft.com/download) |
+| Requirement | Details |
+|---|---|
+| **Azure subscription** | Any subscription where you can create resources. [Free trial](https://azure.microsoft.com/free/) works. |
+| **VS Code** | With [GitHub Copilot](https://docs.github.com/en/copilot/get-started) and [MSSQL extension](https://marketplace.visualstudio.com/items?itemName=ms-mssql.mssql) installed |
+| Azure CLI | ≥ 2.57 — [Install](https://learn.microsoft.com/cli/azure/install-azure-cli) |
+| Bicep CLI | ≥ 0.27 — Bundled with Azure CLI (`az bicep install`) |
+| .NET SDK | 8.x — [Install](https://dotnet.microsoft.com/download) |
 
 ---
 
